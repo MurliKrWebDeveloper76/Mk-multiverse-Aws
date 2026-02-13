@@ -255,9 +255,10 @@ const SentinelView = ({ isAuditing, auditLog, runAudit, terminalRef }: any) => (
           {auditLog.map((log: string, i: number) => {
             const isAI = log.startsWith('[SENTINEL]');
             const isError = log.startsWith('[ERROR]');
+            const isSystem = log.startsWith('[SYSTEM]');
             return (
-              <div key={i} className={`mb-3 flex gap-3 ${isAI ? 'text-indigo-400 font-bold' : isError ? 'text-rose-500' : 'text-slate-500'}`}>
-                <span className="opacity-30">{new Date().toLocaleTimeString([], { hour12: false })}</span>
+              <div key={i} className={`mb-3 flex gap-3 ${isAI ? 'text-indigo-400 font-bold' : isError ? 'text-rose-500 font-black' : isSystem ? 'text-emerald-500/80' : 'text-slate-500'}`}>
+                <span className="opacity-30 min-w-[65px]">{new Date().toLocaleTimeString([], { hour12: false })}</span>
                 <span className="flex-1">{log}</span>
               </div>
             );
@@ -542,6 +543,12 @@ const App = () => {
    */
   const runAudit = async () => {
     if (isAuditing) return;
+
+    if (!process.env.API_KEY) {
+      setAuditLog(prev => [...prev, '[ERROR] Security Breach: No API_KEY configured in environment.', '[SYSTEM] Deployment incomplete. Ensure API_KEY is set in Vercel settings.']);
+      return;
+    }
+
     setIsAuditing(true);
     setAuditLog(prev => [...prev, '[SYSTEM] Connecting to Neural Core...', '[SYSTEM] Analyzing Cluster Load: ' + graphData[graphData.length-1].load.toFixed(2) + '%']);
 
@@ -549,7 +556,7 @@ const App = () => {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Infrastructure Report: Load=${graphData[graphData.length-1].load.toFixed(1)}%, Network=4.2Gbps, Uptime=99.998%. Provide a high-level enterprise security audit summary in under 80 words. Focus on stability and future resilience.`,
+        contents: `Infrastructure Report: Load=${graphData[graphData.length-1].load.toFixed(1)}%, Network=4.2Gbps, Uptime=99.998%. Provide a high-level enterprise security audit summary in under 80 words. Focus on stability and future resilience. Use terms like "Neural Link", "Hardened", and "Integrity".`,
         config: {
           systemInstruction: 'You are the MK Multiverse Security AI Sentinel. Speak with extreme professionalism and technical authority.',
           temperature: 0.4,
@@ -559,7 +566,12 @@ const App = () => {
       const auditText = response.text || "Neural link established. System verified as stable.";
       setAuditLog(prev => [...prev, `[SENTINEL] ${auditText}`, '[SYSTEM] Neural audit finalized. Integrity confirmed.']);
     } catch (error) {
-      setAuditLog(prev => [...prev, `[ERROR] Secure tunnel breach: ${error instanceof Error ? error.message : 'Unknown Fault'}`]);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown Fault';
+      setAuditLog(prev => [
+        ...prev, 
+        `[ERROR] Secure tunnel breach: ${errorMsg}`,
+        '[ERROR] Check Vercel Environment Variables for valid API_KEY.'
+      ]);
     } finally {
       setIsAuditing(false);
     }
