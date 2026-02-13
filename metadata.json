@@ -1,7 +1,7 @@
 {
   "name": "MK Multiverse Enterprise Cloud Dashboard",
-  "description": "A high-security, production-grade cloud management platform featuring real-time analytics, RBAC, and hardened security layers.",
+  "description": "A high-security, production-grade cloud management platform featuring real-time neural auditing, global telemetry, and hardened infrastructure orchestration.",
   "requestFramePermissions": [
-    "camera"
+    "microphone"
   ]
 }
