@@ -553,7 +553,9 @@ const App = () => {
     setAuditLog(prev => [...prev, '[SYSTEM] Connecting to Neural Core...', '[SYSTEM] Analyzing Cluster Load: ' + graphData[graphData.length-1].load.toFixed(2) + '%']);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({
+  apiKey: process.env.NEXT_PUBLIC_API_KEY
+});
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Infrastructure Report: Load=${graphData[graphData.length-1].load.toFixed(1)}%, Network=4.2Gbps, Uptime=99.998%. Provide a high-level enterprise security audit summary in under 80 words. Focus on stability and future resilience. Use terms like "Neural Link", "Hardened", and "Integrity".`,
