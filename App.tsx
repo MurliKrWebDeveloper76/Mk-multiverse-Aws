@@ -8,7 +8,7 @@ import {
   Fingerprint, ZapOff, HardDrive, Users, Clock, Shield, Key, 
   ToggleLeft, ToggleRight, FileText, ChevronDown, MessageSquare, AlertTriangle, Plus,
   ShieldX, Radio, Zap as ZapIcon, Save, Wallet, Receipt, CreditCard as CardIcon, ArrowUpRight,
-  FileDown, Image as ImageIcon, FileCheck, ClipboardList
+  FileDown, Image as ImageIcon, FileCheck, ClipboardList, RadioTower
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -21,7 +21,7 @@ import { GoogleGenAI } from '@google/genai';
 type View = 'Dashboard' | 'Compute' | 'Storage' | 'Sentinel' | 'Analytics' | 'Billing' | 'Settings';
 
 interface MetricData {
-  time: number;
+  time: string;
   load: number;
   traffic: number;
   latency: number;
@@ -38,8 +38,10 @@ interface ComputeNode {
 }
 
 // --- CONSTANTS ---
-const INITIAL_GRAPH_DATA: MetricData[] = Array.from({ length: 30 }, (_, i) => ({
-  time: i,
+const getNowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+const INITIAL_GRAPH_DATA: MetricData[] = Array.from({ length: 20 }, (_, i) => ({
+  time: new Date(Date.now() - (20 - i) * 2000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   load: 30 + Math.random() * 20,
   traffic: 15 + Math.random() * 40,
   latency: 18 + Math.random() * 10
@@ -82,7 +84,6 @@ const neuralDownload = (content: string | Blob, fileName: string, contentType: s
   document.body.appendChild(link);
   link.click();
   
-  // Clean up to prevent memory leaks and ghost elements
   setTimeout(() => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
@@ -96,41 +97,27 @@ const generateMockCanvasImage = (title: string): Promise<Blob> => {
     canvas.height = 400;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Background
     ctx.fillStyle = '#060910';
     ctx.fillRect(0, 0, 800, 400);
-
-    // Grid
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 1;
     for (let i = 0; i < 800; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 400); ctx.stroke(); }
     for (let i = 0; i < 400; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(800, i); ctx.stroke(); }
-
-    // Title
     ctx.fillStyle = '#6366f1';
     ctx.font = 'bold 24px sans-serif';
     ctx.fillText('MK MULTIVERSE CORE ARCHIVE', 40, 60);
-    
     ctx.fillStyle = '#ffffff';
     ctx.font = '14px monospace';
     ctx.fillText(`REPORT_ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}`, 40, 90);
     ctx.fillText(`TIMESTAMP: ${new Date().toISOString()}`, 40, 110);
     ctx.fillText(`DATASET: ${title}`, 40, 130);
-
-    // Decorative "Wave"
     ctx.strokeStyle = '#10b981';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, 300);
-    for (let i = 0; i < 800; i++) {
-      ctx.lineTo(i, 300 + Math.sin(i * 0.05) * 20);
-    }
+    for (let i = 0; i < 800; i++) { ctx.lineTo(i, 300 + Math.sin(i * 0.05) * 20); }
     ctx.stroke();
-
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-    }, 'image/png');
+    canvas.toBlob((blob) => { if (blob) resolve(blob); }, 'image/png');
   });
 };
 
@@ -202,26 +189,79 @@ const DashboardView = ({ data, nodes, setView }: { data: MetricData[], nodes: Co
         <div className="lg:col-span-2 glass p-6 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-[80px] rounded-full pointer-events-none"></div>
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                <TrendingUp size={16} className="text-indigo-500" /> Real-time Telemetry
-              </h3>
-              <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-tighter">Live feedback from 14 global data regions</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-600/20 rounded-lg animate-pulse">
+                <RadioTower size={18} className="text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                   Live Telemetry Stream
+                </h3>
+                <p className="text-[10px] font-mono text-slate-500 mt-0.5 uppercase tracking-tighter">Global Neural Flux Indicator</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+               <div className="flex items-center gap-2">
+                 <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse"></div>
+                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Load (CPU)</span>
+               </div>
+               <div className="flex items-center gap-2">
+                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"></div>
+                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Traffic (IO)</span>
+               </div>
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data}>
                 <defs>
-                  <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={isOverloaded ? "#f43f5e" : "#10b981"} stopOpacity={0.2}/><stop offset="95%" stopColor={isOverloaded ? "#f43f5e" : "#10b981"} stopOpacity={0}/></linearGradient>
-                  <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/><stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="time" hide />
-                <YAxis domain={[0, 100]} stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#0b0f19', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '10px' }} />
-                <Area type="monotone" dataKey="load" stroke={isOverloaded ? "#f43f5e" : "#10b981"} fillOpacity={1} fill="url(#colorLoad)" strokeWidth={3} isAnimationActive={false} />
-                <Area type="monotone" dataKey="traffic" stroke="#6366f1" fillOpacity={1} fill="url(#colorTraffic)" strokeWidth={3} isAnimationActive={false} />
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  minTickGap={20}
+                  interval="preserveStartEnd"
+                />
+                <YAxis 
+                  domain={[0, 100]} 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0b0f19', 
+                    border: '1px solid #1e293b', 
+                    borderRadius: '8px', 
+                    fontSize: '10px',
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)'
+                  }} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="load" 
+                  stroke="#f43f5e" 
+                  fillOpacity={1} 
+                  fill="url(#colorLoad)" 
+                  strokeWidth={3} 
+                  isAnimationActive={false} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="traffic" 
+                  stroke="#10b981" 
+                  fillOpacity={1} 
+                  fill="url(#colorTraffic)" 
+                  strokeWidth={3} 
+                  isAnimationActive={false} 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -699,21 +739,22 @@ const App = () => {
 
   // Live metrics simulation & Overload Detection
   useEffect(() => {
-    if (!authenticated) return;
+    // Note: Authenticated check removed to allow immediate live graph updates for user
     const interval = setInterval(() => {
       setGraphData(prev => {
         const next = [...prev.slice(1)];
-        const last = prev[prev.length - 1];
-        // Occasional spikes to test overload
+        const newTime = getNowTime();
         const newLoad = 20 + Math.random() * 80; 
+        const newTraffic = 20 + Math.random() * 60;
+        
         next.push({
-          time: last.time + 1,
+          time: newTime,
           load: newLoad,
-          traffic: 20 + Math.random() * 50,
+          traffic: newTraffic,
           latency: 15 + Math.random() * 15
         });
 
-        // Update random nodes with new loads
+        // Sync node loads with the global simulation
         setNodes(nPrev => nPrev.map(n => {
            if (n.status === 'STOPPED') return n;
            const nl = Math.floor(Math.random() * 100);
@@ -729,7 +770,7 @@ const App = () => {
       });
     }, 2000);
     return () => clearInterval(interval);
-  }, [authenticated, overloadThreshold]);
+  }, [overloadThreshold]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -773,9 +814,7 @@ const App = () => {
     setIsThinking(true);
 
     try {
-      if (!currentKey) {
-        throw new Error('Neural key missing. Configure Gemini API Key in Settings.');
-      }
+      if (!currentKey) { throw new Error('Neural key missing. Configure Gemini API Key in Settings.'); }
       const ai = new GoogleGenAI({ apiKey: currentKey });
       const currentLoad = graphData[graphData.length-1].load.toFixed(1);
       const activeCount = nodes.filter(n => n.status === 'RUNNING').length;
@@ -800,31 +839,20 @@ const App = () => {
 
   const runAudit = async () => {
     if (isAuditing) return;
-
     const currentKey = getEffectiveApiKey();
     if (!currentKey) {
-      setAuditLog(prev => [
-        ...prev, 
-        '[ERROR] Security Breach: No API_KEY configured.', 
-        '[SYSTEM] ACTION REQUIRED: Add "Gemini API Key" in Settings tab.'
-      ]);
+      setAuditLog(prev => [...prev, '[ERROR] Security Breach: No API_KEY configured.', '[SYSTEM] ACTION REQUIRED: Add "Gemini API Key" in Settings tab.']);
       return;
     }
-
     setIsAuditing(true);
     setAuditLog(prev => [...prev, '[SYSTEM] Establishing secure neural link...', '[SYSTEM] Auditing Nodes: ' + nodes.length + ' active assets.']);
-
     try {
       const ai = new GoogleGenAI({ apiKey: currentKey });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Security Audit Request. Current State: Cluster Load=${graphData[graphData.length-1].load.toFixed(1)}%, Uptime=99.998%. Provide a 2-sentence highly technical security verification summary.`,
-        config: {
-          systemInstruction: 'You are the Sentinel Security AI.',
-          temperature: 0.3,
-        },
+        config: { systemInstruction: 'You are the Sentinel Security AI.', temperature: 0.3, },
       });
-
       const auditText = response.text || "Integrity verified.";
       setAuditLog(prev => [...prev, `[SENTINEL] ${auditText}`, '[SYSTEM] Integrity Check: 100% Passed.']);
     } catch (error) {
@@ -839,7 +867,6 @@ const App = () => {
 
   return (
     <div className={`flex h-screen bg-[#060910] text-slate-200 overflow-hidden font-sans selection:bg-indigo-500/30 transition-all duration-700 ${isGlobalOverload ? 'shadow-[inset_0_0_150px_rgba(244,63,94,0.1)]' : ''}`}>
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0b0f19] border-r border-slate-800 flex flex-col z-[70] transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-20 flex items-center px-8 border-b border-slate-800 font-black text-slate-100 uppercase tracking-[0.2em] text-sm italic">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg mr-3 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)]">
@@ -865,7 +892,6 @@ const App = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className={`h-20 bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 lg:px-10 z-50 transition-all duration-500 ${isGlobalOverload ? 'border-rose-500/40 bg-rose-950/20' : ''}`}>
           <div className="flex items-center">
@@ -907,7 +933,6 @@ const App = () => {
                   </div>
 
                   <div className="glass p-8 rounded-3xl border border-slate-800 space-y-8">
-                     {/* Gemini API Key Section */}
                      <div className="space-y-4">
                         <div className="flex items-center gap-2 text-indigo-400 mb-2">
                            <Key size={16} />
@@ -922,39 +947,23 @@ const App = () => {
                                 placeholder="Paste Neural Access Key..."
                                 className="w-full bg-[#04060b] border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-300 font-mono focus:border-indigo-500 focus:outline-none pr-10"
                               />
-                              <button 
-                                type="button"
-                                onClick={() => setShowApiKey(!showApiKey)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-indigo-400 transition-colors"
-                              >
+                              <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-indigo-400 transition-colors">
                                 {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
                            </div>
-                           <button 
-                            onClick={handleSaveKey}
-                            className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${saveStatus ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'}`}
-                           >
+                           <button onClick={handleSaveKey} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${saveStatus ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'}`}>
                              {saveStatus ? <CheckCircle size={14} /> : <Save size={14} />}
                              {saveStatus ? 'Key Locked' : 'Save Key'}
                            </button>
                         </div>
                         <p className="text-[9px] text-slate-600 font-mono italic">Keys are stored in local secure browser storage for session persistence.</p>
                      </div>
-
                      <div className="border-t border-slate-800 pt-6">
                         <div className="flex justify-between items-center mb-4">
                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Overload Threshold</label>
                            <span className="text-xs font-mono text-indigo-400">{overloadThreshold}%</span>
                         </div>
-                        <input 
-                          type="range" 
-                          min="50" 
-                          max="95" 
-                          value={overloadThreshold} 
-                          onChange={(e) => setOverloadThreshold(parseInt(e.target.value))}
-                          className="w-full h-1 bg-slate-900 rounded-full appearance-none cursor-pointer accent-indigo-500 mb-8" 
-                        />
-                        
+                        <input type="range" min="50" max="95" value={overloadThreshold} onChange={(e) => setOverloadThreshold(parseInt(e.target.value))} className="w-full h-1 bg-slate-900 rounded-full appearance-none cursor-pointer accent-indigo-500 mb-8" />
                         <div className="space-y-4">
                            <SettingToggle label="Autonomous Recovery" sub="Automatically scale nodes when threshold is breached." active />
                            <SettingToggle label="Quantum Shielding" sub="Enable cryptographically hardened layer-2 tunnel." active={false} />
@@ -967,7 +976,6 @@ const App = () => {
         </div>
       </main>
 
-      {/* AI Assistant Chat Panel */}
       {isChatOpen && (
         <div className="fixed right-0 top-20 bottom-0 w-80 bg-[#0b0f19] border-l border-slate-800 z-[80] shadow-2xl flex flex-col animate-in slide-in-from-right-full duration-300">
           <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-[#090d14]">
@@ -1008,15 +1016,8 @@ const App = () => {
           </div>
           <form onSubmit={handleAIChat} className="p-4 border-t border-slate-800 bg-[#090d14]">
             <div className="relative">
-              <input 
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask AI about your cloud..." 
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:border-indigo-500 outline-none pr-10"
-              />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-400 p-2">
-                 <Zap size={16} />
-              </button>
+              <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask AI about your cloud..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:border-indigo-500 outline-none pr-10" />
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-400 p-2"><Zap size={16} /></button>
             </div>
           </form>
         </div>
